@@ -1,0 +1,8 @@
+bin/
+obj/
+publish/
+work/
+.vs/
+.tooling/
+*.user
+*.suo
