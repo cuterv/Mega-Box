@@ -11,12 +11,25 @@ namespace MegaBox.Services;
 
 public sealed class LibraryStore
 {
+    private static long _lastSortOrder;
+
+    private sealed class UploadSession
+    {
+        public required string Id { get; init; }
+        public required string DirectoryPath { get; init; }
+        public required string FilePath { get; init; }
+        public required string FileName { get; init; }
+        public required long ExpectedSize { get; init; }
+        public long ReceivedSize { get; set; }
+    }
+
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff", ".avif"
     };
 
     private readonly object _gate = new();
+    private readonly Dictionary<string, UploadSession> _uploads = new(StringComparer.Ordinal);
     private readonly string _root;
     private readonly string _dataPath;
     private readonly JsonSerializerOptions _jsonOptions = new()
@@ -48,6 +61,7 @@ public sealed class LibraryStore
 
     public string RootPath => _root;
     public string AssetsPath => Path.Combine(_root, "assets");
+    public string PdfCachePath => Path.Combine(_root, "pdf-cache");
     public string ThumbnailsPath => Path.Combine(_root, "thumbnails");
 
     public JsonObject GetLibrary()
@@ -88,7 +102,10 @@ public sealed class LibraryStore
         }
     }
 
-    public JsonObject ImportFiles(IntPtr ownerHandle, string? folderId = null)
+    public async Task<JsonObject> ImportFilesAsync(
+        IntPtr ownerHandle,
+        string? folderId = null,
+        Action<PdfImportProgress>? progress = null)
     {
         var dialog = new OpenFileDialog
         {
@@ -102,23 +119,116 @@ public sealed class LibraryStore
             return new JsonObject { ["canceled"] = true };
         }
 
-        return ImportPaths(dialog.FileNames, folderId);
+        var files = dialog.FileNames.ToArray();
+        return await Task.Run(() => ImportPaths(files, folderId, progress));
     }
 
-    public JsonObject ImportPaths(IEnumerable<string> paths, string? folderId = null)
+    public async Task<JsonObject> ImportPdfAsync(
+        IntPtr ownerHandle,
+        string? parentFolderId,
+        string? pageRange,
+        int dpi,
+        Action<PdfImportProgress>? progress = null)
     {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Import PDF / 导入 PDF / PDFをインポート / PDF 가져오기",
+            Multiselect = false,
+            Filter = "PDF|*.pdf|所有文件|*.*"
+        };
+
+        if (dialog.ShowDialog() != true)
+        {
+            return new JsonObject { ["canceled"] = true };
+        }
+
+        progress?.Invoke(new PdfImportProgress("loading", 0, 0, null));
+        return await ImportPdfPathAsync(
+            dialog.FileName,
+            parentFolderId,
+            pageRange,
+            dpi,
+            progress);
+    }
+
+    public async Task<JsonObject> ImportPdfPathAsync(
+        string pdfPath,
+        string? parentFolderId,
+        string? pageRange,
+        int dpi,
+        Action<PdfImportProgress>? progress = null)
+    {
+        var pdfName = Path.GetFileNameWithoutExtension(pdfPath);
+        var resolvedDpi = Math.Clamp(dpi, 72, 600);
+        var tempRoot = Path.Combine(Path.GetTempPath(), "MegaBox-pdf-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tempRoot);
+        try
+        {
+            progress?.Invoke(new PdfImportProgress("loading", 0, 0, null));
+            var rendered = await PdfConverter.RenderAsync(
+                pdfPath,
+                tempRoot,
+                pageRange ?? "",
+                resolvedDpi,
+                progress);
+            var folder = FindOrCreatePdfFolder(pdfName, parentFolderId);
+            progress?.Invoke(new PdfImportProgress(
+                "importing",
+                rendered.SelectedPageCount,
+                rendered.SelectedPageCount,
+                null));
+            var imported = ImportPaths(rendered.PagePaths, folder["id"]?.GetValue<string>());
+            progress?.Invoke(new PdfImportProgress(
+                "done",
+                rendered.SelectedPageCount,
+                rendered.SelectedPageCount,
+                null));
+            return new JsonObject
+            {
+                ["canceled"] = false,
+                ["folder"] = folder,
+                ["items"] = imported["items"]?.DeepClone() ?? new JsonArray(),
+                ["count"] = imported["count"]?.GetValue<int>() ?? 0,
+                ["pageCount"] = rendered.SelectedPageCount,
+                ["documentPageCount"] = rendered.TotalPageCount
+            };
+        }
+        finally
+        {
+            try { Directory.Delete(tempRoot, true); } catch { }
+        }
+    }
+
+    private JsonObject FindOrCreatePdfFolder(string name, string? parentFolderId)
+    {
+        var resolvedParentId = parentFolderId ?? "";
+        var folders = GetLibrary()["folders"] as JsonArray ?? new JsonArray();
+        var existing = folders.OfType<JsonObject>().FirstOrDefault(folder =>
+            string.Equals(folder["name"]?.GetValue<string>(), name, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(folder["parentId"]?.GetValue<string>() ?? "", resolvedParentId, StringComparison.Ordinal));
+        return existing is null
+            ? CreateFolder(name, resolvedParentId)
+            : existing.DeepClone().AsObject();
+    }
+
+    public JsonObject ImportPaths(
+        IEnumerable<string> paths,
+        string? folderId = null,
+        Action<PdfImportProgress>? progress = null)
+    {
+        var supportedPaths = paths
+            .Where(File.Exists)
+            .Where(path => SupportedExtensions.Contains(Path.GetExtension(path)))
+            .ToArray();
+        progress?.Invoke(new PdfImportProgress("images", 0, supportedPaths.Length, null));
         lock (_gate)
         {
             var data = Load();
             var assets = data["assets"] as JsonArray ?? new JsonArray();
             var imported = new JsonArray();
-
-            foreach (var path in paths.Where(File.Exists))
+            for (var index = 0; index < supportedPaths.Length; index++)
             {
-                if (!SupportedExtensions.Contains(Path.GetExtension(path)))
-                {
-                    continue;
-                }
+                var path = supportedPaths[index];
 
                 var hash = ComputeHash(path);
                 var existing = assets.OfType<JsonObject>()
@@ -130,6 +240,11 @@ public sealed class LibraryStore
                         existing["folderId"] = folderId;
                     }
                     imported.Add(existing.DeepClone());
+                    progress?.Invoke(new PdfImportProgress(
+                        "images",
+                        index + 1,
+                        supportedPaths.Length,
+                        null));
                     continue;
                 }
 
@@ -155,6 +270,7 @@ public sealed class LibraryStore
                     ["width"] = dimensions.Width,
                     ["height"] = dimensions.Height,
                     ["createdAt"] = DateTime.UtcNow.ToString("O"),
+                    ["sortOrder"] = NextSortOrder(),
                     ["folderId"] = string.IsNullOrWhiteSpace(folderId) ? "" : folderId,
                     ["tags"] = new JsonArray(),
                     ["crop"] = CropDefaults()
@@ -162,46 +278,167 @@ public sealed class LibraryStore
 
                 assets.Add(asset);
                 imported.Add(asset.DeepClone());
+                progress?.Invoke(new PdfImportProgress(
+                    "images",
+                    index + 1,
+                    supportedPaths.Length,
+                    null));
             }
 
             data["assets"] = assets;
             Save(data);
+            progress?.Invoke(new PdfImportProgress(
+                "done",
+                supportedPaths.Length,
+                supportedPaths.Length,
+                null));
             return new JsonObject { ["items"] = imported, ["count"] = imported.Count };
         }
     }
 
-    public JsonObject ImportData(JsonArray files, string? folderId = null)
+    public JsonObject BeginUpload(string name, long expectedSize)
     {
-        var tempRoot = Path.Combine(Path.GetTempPath(), "MegaBox-import-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tempRoot);
+        var fileName = Path.GetFileName(name ?? "");
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw new InvalidOperationException("待导入文件缺少名称。");
+        }
+
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        if (!SupportedExtensions.Contains(extension) &&
+            !string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("不支持该文件格式。");
+        }
+        if (expectedSize < 0 || expectedSize > 8L * 1024 * 1024 * 1024)
+        {
+            throw new InvalidOperationException("文件大小超出支持范围。");
+        }
+
+        var id = Guid.NewGuid().ToString("N");
+        var directoryPath = Path.Combine(Path.GetTempPath(), "MegaBox-upload-" + id);
+        Directory.CreateDirectory(directoryPath);
+        var session = new UploadSession
+        {
+            Id = id,
+            DirectoryPath = directoryPath,
+            FilePath = Path.Combine(directoryPath, fileName),
+            FileName = fileName,
+            ExpectedSize = expectedSize
+        };
+        lock (_gate)
+        {
+            _uploads[id] = session;
+        }
+        return new JsonObject { ["uploadId"] = id };
+    }
+
+    public JsonObject AppendUpload(string uploadId, string data)
+    {
+        if (string.IsNullOrWhiteSpace(uploadId) || string.IsNullOrWhiteSpace(data))
+        {
+            throw new InvalidOperationException("上传分块为空。");
+        }
+        if (data.Length > 1024 * 1024)
+        {
+            throw new InvalidOperationException("上传分块过大。");
+        }
+
+        var bytes = Convert.FromBase64String(data);
+        lock (_gate)
+        {
+            if (!_uploads.TryGetValue(uploadId, out var session))
+            {
+                throw new InvalidOperationException("上传会话不存在或已经结束。");
+            }
+            if (session.ReceivedSize + bytes.Length > session.ExpectedSize)
+            {
+                throw new InvalidOperationException("上传数据超过了声明大小。");
+            }
+            using var stream = new FileStream(
+                session.FilePath,
+                FileMode.Append,
+                FileAccess.Write,
+                FileShare.Read,
+                128 * 1024,
+                FileOptions.SequentialScan);
+            stream.Write(bytes);
+            session.ReceivedSize += bytes.Length;
+            return new JsonObject
+            {
+                ["received"] = session.ReceivedSize,
+                ["total"] = session.ExpectedSize
+            };
+        }
+    }
+
+    public async Task<JsonObject> FinishUpload(
+        string uploadId,
+        string? folderId,
+        Action<PdfImportProgress>? progress = null)
+    {
+        UploadSession? session;
+        lock (_gate)
+        {
+            _uploads.TryGetValue(uploadId, out session);
+            if (session is not null)
+            {
+                _uploads.Remove(uploadId);
+            }
+        }
+        if (session is null)
+        {
+            throw new InvalidOperationException("上传会话不存在或已经结束。");
+        }
+        if (session.ReceivedSize != session.ExpectedSize)
+        {
+            DeleteTemporaryUpload(session);
+            throw new InvalidOperationException("文件上传不完整，请重新拖入。");
+        }
+
         try
         {
-            var paths = new List<string>();
-            foreach (var file in files.OfType<JsonObject>())
+            if (string.Equals(Path.GetExtension(session.FileName), ".pdf", StringComparison.OrdinalIgnoreCase))
             {
-                var name = Path.GetFileName(file["name"]?.GetValue<string>() ?? "");
-                var data = file["data"]?.GetValue<string>() ?? "";
-                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(data))
-                {
-                    continue;
-                }
-
-                var comma = data.IndexOf(',');
-                if (comma >= 0)
-                {
-                    data = data[(comma + 1)..];
-                }
-
-                var path = Path.Combine(tempRoot, name);
-                File.WriteAllBytes(path, Convert.FromBase64String(data));
-                paths.Add(path);
+                return await ImportPdfPathAsync(session.FilePath, folderId, "", 75, progress);
             }
-
-            return ImportPaths(paths, folderId);
+            return ImportPaths(new[] { session.FilePath }, folderId);
         }
         finally
         {
-            try { Directory.Delete(tempRoot, true); } catch { }
+            DeleteTemporaryUpload(session);
+        }
+    }
+
+    public JsonObject CancelUpload(string uploadId)
+    {
+        UploadSession? session;
+        lock (_gate)
+        {
+            _uploads.TryGetValue(uploadId, out session);
+            if (session is not null)
+            {
+                _uploads.Remove(uploadId);
+            }
+        }
+        if (session is not null)
+        {
+            DeleteTemporaryUpload(session);
+        }
+        return new JsonObject { ["canceled"] = true };
+    }
+
+    private static void DeleteTemporaryUpload(UploadSession session)
+    {
+        try
+        {
+            if (Directory.Exists(session.DirectoryPath))
+            {
+                Directory.Delete(session.DirectoryPath, true);
+            }
+        }
+        catch
+        {
         }
     }
 
@@ -271,6 +508,7 @@ public sealed class LibraryStore
                 ["folderId"] = string.IsNullOrWhiteSpace(folderId) ? "" : folderId,
                 ["createdAt"] = DateTime.UtcNow.ToString("O"),
                 ["updatedAt"] = DateTime.UtcNow.ToString("O"),
+                ["sortOrder"] = NextSortOrder(),
                 ["items"] = items,
                 ["viewport"] = new JsonObject { ["x"] = 0, ["y"] = 0, ["zoom"] = 1 },
                 ["background"] = "#11141a"
@@ -331,6 +569,9 @@ public sealed class LibraryStore
             var asset = FindById(assets, id)
                 ?? throw new InvalidOperationException("素材不存在。");
             var fileName = asset["fileName"]?.GetValue<string>() ?? "";
+            var previewPath = asset["previewPath"]?.GetValue<string>() ?? "";
+            var sourcePdfFile = asset["sourcePdfFile"]?.GetValue<string>() ?? "";
+            var sourcePdfHash = asset["sourcePdfHash"]?.GetValue<string>() ?? "";
             var affectedBoards = new JsonArray();
 
             if (data["boards"] is JsonArray boards)
@@ -364,11 +605,41 @@ public sealed class LibraryStore
             }
 
             assets.Remove(asset);
+            var sourcePdfStillUsed = !string.IsNullOrWhiteSpace(sourcePdfFile) &&
+                assets.OfType<JsonObject>().Any(candidate =>
+                    string.Equals(
+                        candidate["sourcePdfFile"]?.GetValue<string>(),
+                        sourcePdfFile,
+                        StringComparison.OrdinalIgnoreCase));
             data["assets"] = assets;
             Save(data);
 
             var fileDeleted = false;
-            if (!string.IsNullOrWhiteSpace(fileName) && Path.GetFileName(fileName) == fileName)
+            if (!string.IsNullOrWhiteSpace(sourcePdfFile))
+            {
+                if (!sourcePdfStillUsed)
+                {
+                    var sourcePath = Path.GetFullPath(Path.Combine(AssetsPath, sourcePdfFile));
+                    var assetsRoot = Path.GetFullPath(AssetsPath) + Path.DirectorySeparatorChar;
+                    if (sourcePath.StartsWith(assetsRoot, StringComparison.OrdinalIgnoreCase))
+                    {
+                        try
+                        {
+                            if (File.Exists(sourcePath))
+                            {
+                                File.Delete(sourcePath);
+                                fileDeleted = true;
+                            }
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+
+                DeletePdfPageCacheAssets(previewPath, sourcePdfHash, !sourcePdfStillUsed);
+            }
+            else if (!string.IsNullOrWhiteSpace(fileName) && Path.GetFileName(fileName) == fileName)
             {
                 var assetPath = Path.GetFullPath(Path.Combine(AssetsPath, fileName));
                 var assetsRoot = Path.GetFullPath(AssetsPath) + Path.DirectorySeparatorChar;
@@ -394,6 +665,52 @@ public sealed class LibraryStore
                 ["fileDeleted"] = fileDeleted,
                 ["affectedBoardIds"] = affectedBoards
             };
+        }
+    }
+
+    private void DeletePdfPageCacheAssets(string previewPath, string sourcePdfHash, bool deleteWholePdfCache)
+    {
+        var cacheRoot = Path.GetFullPath(PdfCachePath) + Path.DirectorySeparatorChar;
+        if (deleteWholePdfCache &&
+            !string.IsNullOrWhiteSpace(sourcePdfHash) &&
+            Path.GetFileName(sourcePdfHash) == sourcePdfHash)
+        {
+            var cacheKey = sourcePdfHash[..Math.Min(24, sourcePdfHash.Length)];
+            var directoryPath = Path.GetFullPath(Path.Combine(PdfCachePath, cacheKey));
+            if (directoryPath.StartsWith(cacheRoot, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    if (Directory.Exists(directoryPath))
+                    {
+                        Directory.Delete(directoryPath, true);
+                    }
+                }
+                catch
+                {
+                }
+            }
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(previewPath))
+        {
+            return;
+        }
+
+        var filePath = Path.GetFullPath(Path.Combine(_root, previewPath.Replace('/', Path.DirectorySeparatorChar)));
+        if (filePath.StartsWith(cacheRoot, StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                if (File.Exists(filePath))
+                {
+                    File.Delete(filePath);
+                }
+            }
+            catch
+            {
+            }
         }
     }
 
@@ -461,7 +778,8 @@ public sealed class LibraryStore
                 ["name"] = resolvedName,
                 ["parentId"] = resolvedParentId,
                 ["color"] = palette[folders.Count % palette.Length],
-                ["createdAt"] = DateTime.UtcNow.ToString("O")
+                ["createdAt"] = DateTime.UtcNow.ToString("O"),
+                ["sortOrder"] = NextSortOrder()
             };
             folders.Add(folder);
             data["folders"] = folders;
@@ -620,6 +938,64 @@ public sealed class LibraryStore
 
             data["assets"] = assets;
             data["boards"] = boards;
+            Save(data);
+            return new JsonObject { ["updated"] = updated };
+        }
+    }
+
+    public JsonObject ReorderFiles(JsonArray items)
+    {
+        lock (_gate)
+        {
+            var data = Load();
+            var assets = data["assets"] as JsonArray ?? new JsonArray();
+            var boards = data["boards"] as JsonArray ?? new JsonArray();
+            var sortOrder = NextSortOrder();
+            var updated = 0;
+            foreach (var item in items.OfType<JsonObject>())
+            {
+                var id = item["id"]?.GetValue<string>();
+                var kind = item["kind"]?.GetValue<string>();
+                if (kind is not ("image" or "board"))
+                {
+                    continue;
+                }
+
+                var target = kind == "board" ? FindById(boards, id) : FindById(assets, id);
+                if (target is null)
+                {
+                    continue;
+                }
+                target["sortOrder"] = sortOrder++;
+                updated++;
+            }
+
+            data["assets"] = assets;
+            data["boards"] = boards;
+            Save(data);
+            return new JsonObject { ["updated"] = updated };
+        }
+    }
+
+    public JsonObject ReorderFolders(JsonArray items)
+    {
+        lock (_gate)
+        {
+            var data = Load();
+            var folders = data["folders"] as JsonArray ?? new JsonArray();
+            var sortOrder = NextSortOrder();
+            var updated = 0;
+            foreach (var item in items.OfType<JsonObject>())
+            {
+                var folder = FindById(folders, item["id"]?.GetValue<string>());
+                if (folder is null)
+                {
+                    continue;
+                }
+                folder["sortOrder"] = sortOrder++;
+                updated++;
+            }
+            data["folders"] = folders;
             Save(data);
             return new JsonObject { ["updated"] = updated };
         }
@@ -793,6 +1169,20 @@ public sealed class LibraryStore
     {
         using var stream = File.OpenRead(path);
         return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+    }
+
+    private static long NextSortOrder()
+    {
+        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() * 1000L;
+        while (true)
+        {
+            var previous = Interlocked.Read(ref _lastSortOrder);
+            var next = Math.Max(timestamp, previous + 1);
+            if (Interlocked.CompareExchange(ref _lastSortOrder, next, previous) == previous)
+            {
+                return next;
+            }
+        }
     }
 
     private (int Width, int Height) GetAssetDimensions(JsonObject asset)

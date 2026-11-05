@@ -8,6 +8,11 @@
   const pendingRequests = new Map();
   let requestSequence = 0;
   let internalDragActive = false;
+  let libraryDragKind = "";
+  let libraryDraggedFolderId = "";
+  let libraryDraggedItemKeys = [];
+  let libraryMarqueeActive = false;
+  let libraryClickSuppressedUntil = 0;
 
   const uiText = {
     "zh-CN": {
@@ -38,6 +43,27 @@
       filesLocal: "文件保存在本机",
       searchPlaceholder: "搜索名称、标签或类型…",
       importAssets: "导入素材",
+      dropToImport: "释放以导入素材",
+      dropFormats: "支持图片与 PDF",
+      importPdf: "导入 PDF",
+      pdfImportTitle: "将 PDF 导入为图片",
+      pdfPageRange: "页码范围",
+      pdfPageRangeHint: "留空表示全部页面，例如：1-5, 8, 10-12",
+      pdfResolution: "渲染分辨率",
+      pdfImportButton: "开始转换",
+      pdfImporting: "正在转换 PDF，请稍候…",
+      pdfImported: "已从 PDF 导入 {count} 页到“{folder}”",
+      pdfPage: "PDF 页码",
+      pdfProgressTitle: "正在导入 PDF",
+      importProgressTitle: "正在导入素材",
+      importPreparing: "正在准备导入…",
+      imageImporting: "正在导入第 {current} / {total} 个素材…",
+      importFinishing: "正在写入素材库…",
+      pdfPreparing: "正在读取 PDF 信息…",
+      pdfReading: "正在读取文件 {percent}%",
+      pdfRendering: "正在转换第 {current} / {total} 页…",
+      pdfSaving: "正在保存页面…",
+      selectAll: "全选",
       newBoard: "新建画布",
       itemsOnDevice: "个项目，保存在此设备",
       dragImages: "把图片拖进来，或从本机导入素材",
@@ -281,6 +307,27 @@
       filesLocal: "Files stored on this device",
       searchPlaceholder: "Search names, tags, or types…",
       importAssets: "Import Assets",
+      dropToImport: "Drop to import",
+      dropFormats: "Images and PDF are supported",
+      importPdf: "Import PDF",
+      pdfImportTitle: "Import PDF as Images",
+      pdfPageRange: "Page range",
+      pdfPageRangeHint: "Leave blank for all pages, for example: 1-5, 8, 10-12",
+      pdfResolution: "Render resolution",
+      pdfImportButton: "Start Conversion",
+      pdfImporting: "Converting PDF, please wait…",
+      pdfImported: "Imported {count} pages from PDF into “{folder}”",
+      pdfPage: "PDF page",
+      pdfProgressTitle: "Importing PDF",
+      importProgressTitle: "Importing Assets",
+      importPreparing: "Preparing import…",
+      imageImporting: "Importing item {current} of {total}…",
+      importFinishing: "Writing to the library…",
+      pdfPreparing: "Reading PDF information…",
+      pdfReading: "Reading file {percent}%",
+      pdfRendering: "Rendering page {current} of {total}…",
+      pdfSaving: "Saving pages…",
+      selectAll: "Select All",
       newBoard: "New Board",
       itemsOnDevice: "items stored on this device",
       dragImages: "Drag images here or import from this device",
@@ -526,6 +573,27 @@
     filesLocal: "ファイルはこの端末に保存されます",
     searchPlaceholder: "名前、タグ、種類を検索…",
     importAssets: "アセットをインポート",
+    dropToImport: "ドロップしてインポート",
+    dropFormats: "画像と PDF に対応",
+    importPdf: "PDFをインポート",
+    pdfImportTitle: "PDFを画像としてインポート",
+    pdfPageRange: "ページ範囲",
+    pdfPageRangeHint: "空欄の場合は全ページ。例：1-5, 8, 10-12",
+    pdfResolution: "レンダリング解像度",
+    pdfImportButton: "変換を開始",
+    pdfImporting: "PDFを変換中です。しばらくお待ちください…",
+    pdfImported: "PDFから {count} ページを「{folder}」へインポートしました",
+    pdfPage: "PDF ページ",
+    pdfProgressTitle: "PDFをインポート中",
+    importProgressTitle: "アセットをインポート中",
+    importPreparing: "インポートを準備しています…",
+    imageImporting: "{current} / {total} 個のアセットをインポート中…",
+    importFinishing: "ライブラリへ保存しています…",
+    pdfPreparing: "PDF情報を読み込んでいます…",
+    pdfReading: "ファイルを読み込み中 {percent}%",
+    pdfRendering: "{current} / {total} ページを変換中…",
+    pdfSaving: "ページを保存しています…",
+    selectAll: "すべて選択",
     newBoard: "新規ボード",
     itemsOnDevice: "個のアイテムをこの端末に保存",
     dragImages: "画像をここにドラッグするか、この端末からインポートしてください",
@@ -771,6 +839,27 @@
     filesLocal: "파일이 이 기기에 저장됩니다",
     searchPlaceholder: "이름, 태그 또는 유형 검색…",
     importAssets: "에셋 가져오기",
+    dropToImport: "놓아서 가져오기",
+    dropFormats: "이미지와 PDF 지원",
+    importPdf: "PDF 가져오기",
+    pdfImportTitle: "PDF를 이미지로 가져오기",
+    pdfPageRange: "페이지 범위",
+    pdfPageRangeHint: "비워 두면 모든 페이지입니다. 예: 1-5, 8, 10-12",
+    pdfResolution: "렌더링 해상도",
+    pdfImportButton: "변환 시작",
+    pdfImporting: "PDF를 변환하는 중입니다. 잠시 기다려 주세요…",
+    pdfImported: "PDF에서 {count}페이지를 “{folder}”로 가져왔습니다",
+    pdfPage: "PDF 페이지",
+    pdfProgressTitle: "PDF 가져오는 중",
+    importProgressTitle: "에셋 가져오는 중",
+    importPreparing: "가져오기를 준비하는 중…",
+    imageImporting: "{current} / {total}번째 에셋 가져오는 중…",
+    importFinishing: "라이브러리에 저장하는 중…",
+    pdfPreparing: "PDF 정보를 읽는 중…",
+    pdfReading: "파일 읽는 중 {percent}%",
+    pdfRendering: "{current} / {total} 페이지 변환 중…",
+    pdfSaving: "페이지 저장 중…",
+    selectAll: "모두 선택",
     newBoard: "새 보드",
     itemsOnDevice: "개 항목이 이 기기에 저장됨",
     dragImages: "이미지를 여기로 끌어오거나 이 기기에서 가져오세요",
@@ -1022,9 +1111,18 @@
     if (minimize) minimize.title = t("windowMinimize");
     if (maximize) maximize.title = t("windowMaximize");
     if (close) close.title = t("windowClose");
+    updateStaticText();
+  }
+
+  function updateStaticText() {
+    const dropTitle = document.querySelector("[data-drop-title]");
+    const dropFormats = document.querySelector("[data-drop-formats]");
+    if (dropTitle) dropTitle.textContent = t("dropToImport");
+    if (dropFormats) dropFormats.textContent = t("dropFormats");
   }
 
   document.documentElement.lang = getLanguage();
+  updateStaticText();
 
   const icons = {
     library:
@@ -1041,6 +1139,8 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>',
     upload:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4m0 0L7 9m5-5 5 5"/><path d="M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4"/></svg>',
+    pdf:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h5M8.5 13h1.2a1.3 1.3 0 0 1 0 2.6H8.5V13zm0 2.6V19m4-6h2.8m-2.8 3h2.2m-2.2 3v-6h1.5a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5z"/></svg>',
     plus:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>',
     open:
@@ -1063,6 +1163,8 @@
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
     grid:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>',
+    selectAll:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="12" height="12" rx="1.5"/><path d="M8 8h4M8 12h4M18 8h2v12H8v-2"/></svg>',
     compact:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="6" height="5" rx="1"/><rect x="11" y="4" width="6" height="5" rx="1"/><rect x="19" y="4" width="2" height="5" rx="1"/><rect x="3" y="12" width="6" height="5" rx="1"/><rect x="11" y="12" width="6" height="5" rx="1"/><rect x="19" y="12" width="2" height="5" rx="1"/></svg>',
     settings:
@@ -1109,7 +1211,13 @@
   }
 
   function assetUrl(asset) {
-    return `https://assets.megabox.local/assets/${encodeURIComponent(asset.fileName)}`;
+    const relativePath = asset.previewPath || `assets/${asset.fileName}`;
+    const encodedPath = String(relativePath)
+      .replaceAll("\\", "/")
+      .split("/")
+      .map((part) => encodeURIComponent(part))
+      .join("/");
+    return `https://assets.megabox.local/${encodedPath}`;
   }
 
   function formatBytes(bytes) {
@@ -1135,6 +1243,134 @@
     if (characters.length <= threshold) return characters.join("");
     return `${characters.slice(0, 4).join("")}…${characters.slice(-4).join("")}`;
   }
+
+  const assetHoverPreview = (() => {
+    let element = null;
+    let frame = null;
+    let image = null;
+    let title = null;
+    let detail = null;
+    let showTimer = 0;
+    let activeTrigger = null;
+    let loadToken = 0;
+
+    function ensureElement() {
+      if (element) return;
+      element = document.createElement("div");
+      element.className = "asset-hover-preview";
+      element.setAttribute("aria-hidden", "true");
+      element.innerHTML = `
+        <div class="asset-hover-preview-frame"><img alt="" draggable="false" /></div>
+        <div class="asset-hover-preview-copy">
+          <strong></strong>
+          <span></span>
+        </div>`;
+      document.body.append(element);
+      frame = element.querySelector(".asset-hover-preview-frame");
+      image = element.querySelector("img");
+      title = element.querySelector("strong");
+      detail = element.querySelector("span");
+    }
+
+    function hide() {
+      window.clearTimeout(showTimer);
+      showTimer = 0;
+      activeTrigger = null;
+      loadToken += 1;
+      element?.classList.remove("visible");
+      element?.setAttribute("aria-hidden", "true");
+    }
+
+    function position(clientX, clientY) {
+      if (!element) return;
+      const margin = 12;
+      const gap = 18;
+      const rect = element.getBoundingClientRect();
+      let left = clientX + gap;
+      let top = clientY + gap;
+      if (left + rect.width > window.innerWidth - margin) {
+        left = clientX - rect.width - gap;
+      }
+      if (top + rect.height > window.innerHeight - margin) {
+        top = clientY - rect.height - gap;
+      }
+      element.style.left = `${Math.max(margin, left)}px`;
+      element.style.top = `${Math.max(margin, top)}px`;
+    }
+
+    function fitImage(naturalWidth, naturalHeight, clientX, clientY) {
+      if (!element || !frame || !image ||
+          !Number.isFinite(naturalWidth) || !Number.isFinite(naturalHeight) ||
+          naturalWidth <= 0 || naturalHeight <= 0) {
+        return;
+      }
+      const maxOuterWidth = Math.max(220, Math.min(620, window.innerWidth - 24));
+      const maxFrameWidth = maxOuterWidth - 18;
+      const maxFrameHeight = Math.max(180, Math.min(540, window.innerHeight * 0.64));
+      const scale = Math.min(maxFrameWidth / naturalWidth, maxFrameHeight / naturalHeight);
+      const width = Math.max(1, Math.round(naturalWidth * scale));
+      const height = Math.max(1, Math.round(naturalHeight * scale));
+      element.style.width = `${width + 20}px`;
+      frame.style.width = `${width}px`;
+      frame.style.height = `${height}px`;
+      image.style.width = `${width}px`;
+      image.style.height = `${height}px`;
+      position(clientX, clientY);
+    }
+
+    function show(asset, clientX, clientY) {
+      ensureElement();
+      if (!element || !frame || !image || !title || !detail) return;
+      const token = ++loadToken;
+      title.textContent = asset.name || t("untitledAsset");
+      detail.textContent = `${Number(asset.width || 0)} × ${Number(asset.height || 0)}`;
+      element.classList.add("visible");
+      element.setAttribute("aria-hidden", "false");
+      image.onload = () => {
+        if (token === loadToken) {
+          fitImage(image.naturalWidth, image.naturalHeight, clientX, clientY);
+          detail.textContent = `${image.naturalWidth} × ${image.naturalHeight}`;
+        }
+      };
+      image.onerror = () => {
+        if (token === loadToken) {
+          fitImage(Number(asset.width || 0), Number(asset.height || 0), clientX, clientY);
+        }
+      };
+      image.src = assetUrl(asset);
+      fitImage(
+        Number(asset.width || image.naturalWidth || 0),
+        Number(asset.height || image.naturalHeight || 0),
+        clientX,
+        clientY
+      );
+    }
+
+    function bind(root, resolveAsset) {
+      root.addEventListener("pointerover", (event) => {
+        const trigger = event.target.closest("[data-asset-preview-id]");
+        if (!trigger || trigger === activeTrigger || internalDragActive) return;
+        const asset = resolveAsset(trigger.dataset.assetPreviewId);
+        if (!asset) return;
+        window.clearTimeout(showTimer);
+        activeTrigger = trigger;
+        const clientX = event.clientX;
+        const clientY = event.clientY;
+        showTimer = window.setTimeout(() => show(asset, clientX, clientY), 180);
+      });
+      root.addEventListener("pointerout", (event) => {
+        const trigger = event.target.closest("[data-asset-preview-id]");
+        if (!trigger || trigger !== activeTrigger) return;
+        if (event.relatedTarget instanceof Node && trigger.contains(event.relatedTarget)) return;
+        hide();
+      });
+      root.addEventListener("scroll", hide, true);
+      document.addEventListener("pointerdown", hide, true);
+      window.addEventListener("blur", hide);
+    }
+
+    return { bind, hide };
+  })();
 
   function countLabel(count, singular, plural) {
     return `${count} ${count === 1 ? singular : plural}`;
@@ -1171,7 +1407,7 @@
     }, timeout);
   }
 
-  function invoke(action, payload = {}) {
+  function invoke(action, payload = {}, options = {}) {
     return new Promise((resolve, reject) => {
       const bridge = window.chrome?.webview;
       if (!bridge) {
@@ -1180,7 +1416,11 @@
       }
 
       const requestId = `req-${++requestSequence}`;
-      pendingRequests.set(requestId, { resolve, reject });
+      pendingRequests.set(requestId, {
+        resolve,
+        reject,
+        onProgress: options.onProgress
+      });
       bridge.postMessage(JSON.stringify({ action, requestId, ...payload }));
     });
   }
@@ -1197,6 +1437,13 @@
       }
       const pending = pendingRequests.get(message?.requestId);
       if (!pending) return;
+      if (message.progress) {
+        try {
+          pending.onProgress?.(message.progress);
+        } catch {
+        }
+        return;
+      }
       pendingRequests.delete(message.requestId);
       if (message.ok) {
         pending.resolve(message.payload);
@@ -1206,19 +1453,65 @@
     });
   }
 
-  function readFilesAsPayload(files) {
-    const list = [...files].filter((file) => file.type.startsWith("image/") || /\.(png|jpe?g|webp|gif|bmp|tiff?|avif)$/i.test(file.name));
-    return Promise.all(
-      list.map(
-        (file) =>
-          new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve({ name: file.name, data: reader.result });
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(file);
-          })
-      )
-    );
+  function isPdfFile(file) {
+    return file.type === "application/pdf" || /\.pdf$/i.test(file.name || "");
+  }
+
+  function isSupportedImportFile(file) {
+    return (file.type || "").startsWith("image/") ||
+      isPdfFile(file) ||
+      /\.(png|jpe?g|webp|gif|bmp|tiff?|avif)$/i.test(file.name || "");
+  }
+
+  function readBlobAsBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error);
+      reader.onload = () => {
+        const result = String(reader.result || "");
+        const comma = result.indexOf(",");
+        resolve(comma >= 0 ? result.slice(comma + 1) : result);
+      };
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  async function uploadDroppedFiles(files, payload, callbacks = {}) {
+    const list = [...files].filter(isSupportedImportFile);
+    const totalBytes = list.reduce((sum, file) => sum + Number(file.size || 0), 0);
+    const chunkSize = 512 * 1024;
+    let uploadedBytes = 0;
+    let count = 0;
+    const items = [];
+
+    for (let fileIndex = 0; fileIndex < list.length; fileIndex += 1) {
+      const file = list[fileIndex];
+      const upload = await invoke("upload.begin", {
+        name: file.name,
+        size: Number(file.size || 0)
+      });
+      const uploadId = upload.uploadId;
+      try {
+        for (let offset = 0; offset < file.size; offset += chunkSize) {
+          const chunk = file.slice(offset, Math.min(file.size, offset + chunkSize));
+          const data = await readBlobAsBase64(chunk);
+          await invoke("upload.chunk", { uploadId, data });
+          uploadedBytes += chunk.size;
+          callbacks.onRead?.(uploadedBytes, totalBytes, fileIndex + 1, list.length);
+        }
+        const result = await invoke(
+          "upload.finish",
+          { uploadId, folderId: payload.folderId || "" },
+          { onProgress: callbacks.onImport }
+        );
+        count += Number(result.count || 0);
+        items.push(...(result.items || []));
+      } catch (error) {
+        invoke("upload.cancel", { uploadId }).catch(() => {});
+        throw error;
+      }
+    }
+    return { items, count };
   }
 
   function bindFileDrop(onImported, getImportPayload = () => ({})) {
@@ -1265,13 +1558,37 @@
       event.preventDefault();
       depth = 0;
       overlay.hidden = true;
+      const droppedFiles = [...event.dataTransfer.files];
+      const supportedFiles = droppedFiles.filter(isSupportedImportFile);
+      const pdfProgress = supportedFiles.length > 1 || supportedFiles.some(isPdfFile)
+        ? openPdfProgressDialog()
+        : null;
       try {
-        const files = await readFilesAsPayload(event.dataTransfer.files);
-        if (!files.length) return;
-        const result = await invoke("files.importData", { files, ...getImportPayload() });
+        if (!supportedFiles.length) {
+          pdfProgress?.close();
+          return;
+        }
+        const result = await uploadDroppedFiles(
+          supportedFiles,
+          getImportPayload(event),
+          {
+            onRead: (current, total, fileIndex, fileCount) => {
+              pdfProgress?.update({
+                stage: "reading",
+                current,
+                total,
+                fileIndex,
+                fileCount
+              });
+            },
+            onImport: (progress) => pdfProgress?.update(progress)
+          }
+        );
+        pdfProgress?.finish();
         toast(t("importedAssets", { count: result.count }));
         await onImported?.(result.items || []);
       } catch (error) {
+        pdfProgress?.close();
         toast(error.message, "error", 5000);
       }
     });
@@ -1335,6 +1652,140 @@
         }
       }, 30);
     });
+  }
+
+  function openPdfImportDialog() {
+    return new Promise((resolve) => {
+      const backdrop = document.createElement("div");
+      backdrop.className = "modal-backdrop";
+      backdrop.innerHTML = `
+        <form class="modal-card pdf-import-dialog">
+          <div class="modal-icon">${icon("pdf")}</div>
+          <h2>${t("pdfImportTitle")}</h2>
+          <label class="field modal-field">
+            <span>${t("pdfPageRange")}</span>
+            <input name="pageRange" type="text" placeholder="${t("pdfPageRangeHint")}" autocomplete="off" />
+          </label>
+          <label class="field modal-field">
+            <span>${t("pdfResolution")}</span>
+            <select name="dpi">
+              <option value="75" selected>75 DPI</option>
+              <option value="150">150 DPI</option>
+              <option value="300">300 DPI</option>
+            </select>
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="button" data-modal-cancel>${t("cancel")}</button>
+            <button type="submit" class="button primary">${t("pdfImportButton")}</button>
+          </div>
+        </form>`;
+      document.body.append(backdrop);
+      const form = backdrop.querySelector("form");
+      const pageRange = form.querySelector('[name="pageRange"]');
+      const close = (result) => {
+        document.removeEventListener("keydown", onKeyDown);
+        backdrop.remove();
+        resolve(result);
+      };
+      const onKeyDown = (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close(null);
+        }
+      };
+      form.querySelector("[data-modal-cancel]").addEventListener("click", () => close(null));
+      backdrop.addEventListener("pointerdown", (event) => {
+        if (event.target === backdrop) close(null);
+      });
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        close({
+          pageRange: pageRange.value.trim(),
+          dpi: Number(form.querySelector('[name="dpi"]').value) || 75
+        });
+      });
+      document.addEventListener("keydown", onKeyDown);
+      setTimeout(() => pageRange.focus(), 30);
+    });
+  }
+
+  function openPdfProgressDialog() {
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+    backdrop.innerHTML = `
+      <div class="modal-card pdf-progress-dialog" role="dialog" aria-live="polite">
+        <div class="modal-icon">${icon("pdf")}</div>
+        <h2>${t("importProgressTitle")}</h2>
+        <p data-pdf-progress-message>${t("importPreparing")}</p>
+        <div class="pdf-progress-track"><span data-pdf-progress-bar></span></div>
+        <div class="pdf-progress-meta">
+          <span data-pdf-progress-detail>0%</span>
+          <span data-pdf-progress-percent>0%</span>
+        </div>
+      </div>`;
+    document.body.append(backdrop);
+
+    const message = backdrop.querySelector("[data-pdf-progress-message]");
+    const detail = backdrop.querySelector("[data-pdf-progress-detail]");
+    const percentLabel = backdrop.querySelector("[data-pdf-progress-percent]");
+    const bar = backdrop.querySelector("[data-pdf-progress-bar]");
+    let closed = false;
+
+    const update = (progress = {}) => {
+      if (closed) return;
+      const stage = progress.stage || "loading";
+      const current = Math.max(0, Number(progress.current) || 0);
+      const total = Math.max(0, Number(progress.total) || 0);
+      let percent = 6;
+      if (stage === "reading" && total > 0) {
+        percent = Math.round((current / total) * 100);
+        message.textContent = t("pdfReading", { percent });
+        detail.textContent = `${formatBytes(current)} / ${formatBytes(total)}`;
+      } else if (stage === "render" && total > 0) {
+        percent = 10 + Math.round((current / total) * 85);
+        message.textContent = t("pdfRendering", { current, total });
+        detail.textContent = progress.pageNumber
+          ? `PDF · ${progress.pageNumber} / ${total}`
+          : `${current} / ${total}`;
+      } else if (stage === "images" && total > 0) {
+        percent = 10 + Math.round((current / total) * 85);
+        message.textContent = t("imageImporting", { current, total });
+        detail.textContent = `${current} / ${total}`;
+      } else if (stage === "importing") {
+        percent = 96;
+        message.textContent = t("pdfSaving");
+        detail.textContent = total > 0 ? `${current} / ${total}` : "";
+      } else if (stage === "done") {
+        percent = 100;
+        message.textContent = t("importFinishing");
+        detail.textContent = total > 0 ? `${current} / ${total}` : "";
+      } else if (stage === "selected") {
+        percent = 10;
+        message.textContent = t("pdfRendering", { current: 0, total });
+        detail.textContent = `0 / ${total}`;
+      } else {
+        message.textContent = t("importPreparing");
+        detail.textContent = "MegaBox";
+      }
+
+      percent = Math.max(0, Math.min(100, percent));
+      bar.style.width = `${percent}%`;
+      percentLabel.textContent = `${percent}%`;
+      bar.classList.toggle("indeterminate", total === 0 && stage !== "done");
+    };
+
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      backdrop.remove();
+    };
+    const finish = () => {
+      update({ stage: "done", current: 1, total: 1 });
+      setTimeout(close, 360);
+    };
+
+    update();
+    return { update, finish, close };
   }
 
   function closeWindow() {
@@ -1426,11 +1877,12 @@
       folderId: null,
       tagName: null,
       selected: new Set(),
+      selectionAnchorKey: null,
       density: "normal",
       expandedFolders: new Set(Array.isArray(expandedFolderIds) ? expandedFolderIds : [])
     };
 
-    const load = async () => {
+    const load = async ({ preserveContentScroll = false } = {}) => {
       state.library = await invoke("library.get");
       state.library.folders ||= [];
       state.library.tags ||= [];
@@ -1445,7 +1897,7 @@
       if (state.tagName && !getTags().some((tag) => tag.name === state.tagName)) {
         state.tagName = null;
       }
-      render();
+      render({ preserveContentScroll });
     };
 
     const getEntries = () => {
@@ -1472,7 +1924,19 @@
           typeLabel: "FOLDER"
         }));
       }
-      let entries = [...folderEntries, ...assetEntries, ...boardEntries];
+      const compareSortOrder = (left, right) => {
+        const leftOrder = Number(left.sortOrder);
+        const rightOrder = Number(right.sortOrder);
+        const leftHasOrder = Number.isSafeInteger(leftOrder);
+        const rightHasOrder = Number.isSafeInteger(rightOrder);
+        if (!leftHasOrder && !rightHasOrder) return 0;
+        if (!leftHasOrder) return -1;
+        if (!rightHasOrder) return 1;
+        return leftOrder - rightOrder;
+      };
+      const fileEntries = [...assetEntries, ...boardEntries];
+      fileEntries.sort(compareSortOrder);
+      let entries = [...folderEntries, ...fileEntries];
 
       if (state.filter === "image") entries = entries.filter((entry) => entry.entryKind === "image");
       if (state.filter === "board") entries = entries.filter((entry) => entry.entryKind === "board");
@@ -1502,16 +1966,37 @@
       return entries;
     };
 
+    function libraryStorageBytes() {
+      let total = 0;
+      const countedPdfSources = new Set();
+      for (const asset of state.library.assets || []) {
+        const sourcePdfFile = asset.sourcePdfFile || "";
+        if (sourcePdfFile && !countedPdfSources.has(sourcePdfFile)) {
+          countedPdfSources.add(sourcePdfFile);
+          total += Number(asset.sourceSize || 0);
+        }
+        total += Number(asset.size || 0);
+      }
+      return total;
+    }
+
     const entryKey = (entry) => `${entry.entryKind}:${entry.id}`;
     const assetById = (id) => (state.library.assets || []).find((asset) => asset.id === id);
     const folderById = (id) => (state.library.folders || []).find((folder) => folder.id === id);
     const folderName = (id) => folderById(id)?.name || "";
-    const folderCount = (id) =>
-      [...(state.library.assets || []), ...(state.library.boards || [])]
-        .filter((entry) => (id === "__unfiled" ? !entry.folderId : entry.folderId === id))
-        .length;
     const childFolders = (parentId) =>
-      (state.library.folders || []).filter((folder) => (folder.parentId || "") === (parentId || ""));
+      (state.library.folders || [])
+        .filter((folder) => (folder.parentId || "") === (parentId || ""))
+        .sort((left, right) => {
+          const leftOrder = Number(left.sortOrder);
+          const rightOrder = Number(right.sortOrder);
+          const leftHasOrder = Number.isSafeInteger(leftOrder);
+          const rightHasOrder = Number.isSafeInteger(rightOrder);
+          if (!leftHasOrder && !rightHasOrder) return 0;
+          if (!leftHasOrder) return -1;
+          if (!rightHasOrder) return 1;
+          return leftOrder - rightOrder;
+        });
     const folderSubtreeIds = (id) => {
       const result = new Set([id]);
       let changed = true;
@@ -1527,6 +2012,14 @@
       }
       return result;
     };
+    const folderCount = (id) => {
+      const entries = state.library.assets || [];
+      if (id === "__unfiled") {
+        return entries.filter((entry) => !entry.folderId).length;
+      }
+      const folderIds = folderSubtreeIds(id);
+      return entries.filter((entry) => folderIds.has(entry.folderId || "")).length;
+    };
     const folderImageAssets = (id) => {
       const folderIds = folderSubtreeIds(id);
       return (state.library.assets || []).filter((asset) => folderIds.has(asset.folderId || ""));
@@ -1541,10 +2034,11 @@
              tabindex="0"
              draggable="true"
              data-tree-asset="${escapeHtml(asset.id)}"
+             data-asset-preview-id="${escapeHtml(asset.id)}"
              style="--tree-depth:${Math.min(depth, 2)}"
              title="${escapeHtml(asset.name)}">
           <span class="tree-asset-guide"></span>
-          <img class="tree-asset-thumb" src="${assetUrl(asset)}" alt="" draggable="false" />
+          <span class="tree-asset-icon">${icon("image")}</span>
           <span class="folder-row-name">${escapeHtml(compactName(asset.name))}</span>
           <span class="tree-asset-actions">
             <button type="button" data-tree-image-delete="${escapeHtml(asset.id)}" title="${t("deleteImage")}">${icon("trash")}</button>
@@ -1650,7 +2144,8 @@
       return `
         <article class="asset-card ${selected ? "selected" : ""}" data-kind="${entry.entryKind}" data-id="${escapeHtml(entry.id)}" draggable="true" tabindex="0">
           <div class="card-preview">
-            ${isFolder ? folderMosaic(entry) : isBoard ? mosaic(entry) : `<img src="${assetUrl(entry)}" alt="" loading="lazy" draggable="false" />`}
+            ${isFolder ? folderMosaic(entry) : isBoard ? mosaic(entry) : `<img src="${assetUrl(entry)}" alt="" loading="lazy" draggable="false"
+              data-asset-preview-id="${escapeHtml(entry.id)}" />`}
             <span class="type-badge ${isBoard ? "board" : isFolder ? "folder" : ""}">${escapeHtml(entry.typeLabel)}</span>
             <div class="card-toolbar">
               <button type="button" title="${isFolder ? t("openFolder") : t("openNewWindow")}" data-card-action="open">${icon("open")}</button>
@@ -1695,7 +2190,7 @@
             <div class="brand">
               <div class="brand-mark">M</div>
               <div class="brand-name">MegaBox</div>
-              <div class="brand-version">0.1</div>
+              <div class="brand-version">0.2</div>
             </div>
             <div class="sidebar-scroll">
               <div class="sidebar-label">${t("assetSpace")}</div>
@@ -1744,7 +2239,7 @@
               <div class="storage-card">
                 <div class="storage-head"><span>${t("localLibrary")}</span><span>${t("offline")}</span></div>
                 <div class="storage-bar"><span></span></div>
-                <div class="storage-foot">${formatBytes((state.library.assets || []).reduce((sum, item) => sum + Number(item.size || 0), 0))} · ${t("filesLocal")}</div>
+                <div class="storage-foot">${formatBytes(libraryStorageBytes())} · ${t("filesLocal")}</div>
               </div>
             </div>
           </aside>
@@ -1757,6 +2252,7 @@
               </label>
               <div class="toolbar-spacer"></div>
               <button class="button" data-action="import">${icon("upload")}${t("importAssets")}</button>
+              <button class="button" data-action="import-pdf">${icon("pdf")}${t("importPdf")}</button>
               <button class="button primary" data-action="new-board">${icon("plus")}${t("newBoard")}</button>
             </header>
             <main class="content">
@@ -1766,9 +2262,12 @@
                   <h1>${escapeHtml(pageTitle)}</h1>
                   <p>${entries.length ? `${quantity(entries.length, "item", "items", "itemUnit")} ${t("storedOnDevice")}` : state.tagName ? t("tagEmptyHint") : state.folderId ? t("folderDropHint") : t("dragImages")}</p>
                 </div>
-                <div class="view-toggle">
-                  <button class="${state.density === "normal" ? "active" : ""}" data-density="normal" title="${t("gridView")}">${icon("grid")}</button>
-                  <button class="${state.density === "compact" ? "active" : ""}" data-density="compact" title="${t("compactView")}">${icon("compact")}</button>
+                <div class="library-heading-actions">
+                  <button type="button" class="button ghost" data-action="select-all" title="Ctrl+A">${icon("selectAll")}${t("selectAll")}</button>
+                  <div class="view-toggle">
+                    <button class="${state.density === "normal" ? "active" : ""}" data-density="normal" title="${t("gridView")}">${icon("grid")}</button>
+                    <button class="${state.density === "compact" ? "active" : ""}" data-density="compact" title="${t("compactView")}">${icon("compact")}</button>
+                  </div>
                 </div>
               </div>
               ${
@@ -1811,16 +2310,87 @@
       }
     }
 
-    function selectCard(entry, additive) {
+    function selectCard(entry, additive, rangeSelect = false) {
       const key = entryKey(entry);
-      if (additive) {
+      if (rangeSelect && state.selectionAnchorKey) {
+        const entries = getEntries().filter((candidate) => candidate.entryKind !== "folder");
+        const anchorIndex = entries.findIndex(
+          (candidate) => entryKey(candidate) === state.selectionAnchorKey
+        );
+        const currentIndex = entries.findIndex((candidate) => entryKey(candidate) === key);
+        if (anchorIndex >= 0 && currentIndex >= 0) {
+          const start = Math.min(anchorIndex, currentIndex);
+          const end = Math.max(anchorIndex, currentIndex);
+          state.selected = new Set(entries.slice(start, end + 1).map(entryKey));
+        } else {
+          state.selected.add(key);
+        }
+      } else if (additive) {
         if (state.selected.has(key)) state.selected.delete(key);
         else state.selected.add(key);
-      } else if (!state.selected.has(key) || state.selected.size > 1) {
-        state.selected.clear();
-        state.selected.add(key);
+      } else {
+        if (!state.selected.has(key) || state.selected.size > 1) {
+          state.selected.clear();
+          state.selected.add(key);
+        }
+        state.selectionAnchorKey = key;
       }
       render({ preserveContentScroll: true });
+    }
+
+    function selectAllCurrent() {
+      const entries = getEntries().filter((entry) => entry.entryKind !== "folder");
+      state.selected = new Set(entries.map(entryKey));
+      state.selectionAnchorKey = entries.length ? entryKey(entries[0]) : null;
+      render({ preserveContentScroll: true });
+    }
+
+    async function reorderFiles(movedEntries, targetEntry, insertAfter) {
+      if (!movedEntries.length || !targetEntry) return;
+      const movedKeys = new Set(movedEntries.map(entryKey));
+      if (movedKeys.has(entryKey(targetEntry))) return;
+      const currentFiles = getEntries().filter((entry) => entry.entryKind !== "folder");
+      const reordered = currentFiles.filter((entry) => !movedKeys.has(entryKey(entry)));
+      const targetIndex = reordered.findIndex((entry) => entryKey(entry) === entryKey(targetEntry));
+      if (targetIndex < 0) return;
+      reordered.splice(targetIndex + (insertAfter ? 1 : 0), 0, ...movedEntries);
+
+      const before = currentFiles.map(entryKey).join("|");
+      const after = reordered.map(entryKey).join("|");
+      if (before === after) return;
+      try {
+        await invoke("items.reorderFiles", {
+          items: reordered.map((entry) => ({ id: entry.id, kind: entry.entryKind }))
+        });
+        await load({ preserveContentScroll: true });
+      } catch (error) {
+        toast(error.message, "error");
+      }
+    }
+
+    async function reorderFolders(draggedFolderId, targetFolderId, insertAfter) {
+      const dragged = folderById(draggedFolderId);
+      const target = folderById(targetFolderId);
+      if (!dragged || !target || dragged.id === target.id) {
+        return;
+      }
+      const parentId = target.parentId || "";
+      const siblings = childFolders(parentId).filter((folder) => folder.id !== dragged.id);
+      const targetIndex = siblings.findIndex((folder) => folder.id === target.id);
+      if (targetIndex < 0) return;
+      siblings.splice(targetIndex + (insertAfter ? 1 : 0), 0, dragged);
+      try {
+        if ((dragged.parentId || "") !== parentId) {
+          await invoke("folder.move", { id: dragged.id, parentId });
+        }
+        await invoke("folders.reorder", {
+          items: siblings.map((folder) => ({ id: folder.id }))
+        });
+        if (parentId) setFolderExpanded(parentId, true);
+        await load({ preserveContentScroll: true });
+      } catch (error) {
+        toast(error.message, "error");
+      }
     }
 
     async function openEntry(entry) {
@@ -1841,16 +2411,60 @@
     }
 
     async function importFiles() {
+      const progressDialog = openPdfProgressDialog();
       try {
-        const result = await invoke("files.import", {
-          folderId: state.folderId && state.folderId !== "__unfiled" ? state.folderId : ""
-        });
+        const result = await invoke(
+          "files.import",
+          {
+            folderId: state.folderId && state.folderId !== "__unfiled" ? state.folderId : ""
+          },
+          { onProgress: (progress) => progressDialog.update(progress) }
+        );
         if (!result.canceled) {
-        toast(t("importedAssets", { count: result.count }));
+          progressDialog.finish();
+          toast(t("importedAssets", { count: result.count }));
           await load();
+        } else {
+          progressDialog.close();
         }
       } catch (error) {
+        progressDialog.close();
         toast(error.message, "error", 5000);
+      }
+    }
+
+    async function importPdfFiles() {
+      const options = await openPdfImportDialog();
+      if (!options) return;
+      const progressDialog = openPdfProgressDialog();
+      try {
+        const result = await invoke(
+          "pdf.import",
+          {
+            folderId: state.folderId && state.folderId !== "__unfiled" ? state.folderId : "",
+            pageRange: options.pageRange,
+            dpi: options.dpi
+          },
+          { onProgress: (progress) => progressDialog.update(progress) }
+        );
+        if (result.canceled) {
+          progressDialog.close();
+          return;
+        }
+        progressDialog.finish();
+        state.folderId = result.folder?.id || null;
+        state.tagName = null;
+        state.filter = "all";
+        state.query = "";
+        state.selected.clear();
+        await load();
+        toast(t("pdfImported", {
+          count: result.pageCount ?? result.count ?? 0,
+          folder: result.folder?.name || ""
+        }), "success", 5000);
+      } catch (error) {
+        progressDialog.close();
+        toast(error.message, "error", 6000);
       }
     }
 
@@ -2081,8 +2695,13 @@
           (candidate) => candidate.id === card.dataset.id && candidate.entryKind === card.dataset.kind
         );
         card.addEventListener("click", (event) => {
+          if (performance.now() < libraryClickSuppressedUntil) {
+            event.preventDefault();
+            event.stopPropagation();
+            return;
+          }
           if (event.target.closest("[data-card-action]")) return;
-          selectCard(entry, event.ctrlKey || event.metaKey);
+          selectCard(entry, event.shiftKey, event.shiftKey);
         });
         card.addEventListener("dblclick", (event) => {
           if (event.target.closest("[data-card-action]")) return;
@@ -2096,7 +2715,14 @@
           }
         });
         card.addEventListener("dragstart", (event) => {
+          if (libraryMarqueeActive || event.shiftKey) {
+            event.preventDefault();
+            return;
+          }
           internalDragActive = true;
+          libraryDragKind = entry.entryKind === "folder" ? "folder" : "files";
+          libraryDraggedFolderId = entry.entryKind === "folder" ? entry.id : "";
+          libraryDraggedItemKeys = [];
           document.getElementById("drop-overlay").hidden = true;
           if (entry.entryKind === "folder") {
             event.dataTransfer.effectAllowed = "move";
@@ -2110,6 +2736,7 @@
           const entriesToMove = state.selected.has(entryKey(entry)) && selectedEntries.length
             ? selectedEntries
             : [entry];
+          libraryDraggedItemKeys = entriesToMove.map(entryKey);
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData(
             "application/x-megabox-items",
@@ -2123,10 +2750,199 @@
         });
         card.addEventListener("dragend", () => {
           internalDragActive = false;
+          libraryDragKind = "";
+          libraryDraggedFolderId = "";
+          libraryDraggedItemKeys = [];
           document.getElementById("drop-overlay").hidden = true;
           card.classList.remove("dragging");
+          app.querySelectorAll(".reorder-before, .reorder-after").forEach((node) => {
+            node.classList.remove("reorder-before", "reorder-after");
+          });
+        });
+        card.addEventListener("dragover", (event) => {
+          const canReorderFiles =
+            libraryDragKind === "files" && entry.entryKind !== "folder";
+          const canReorderFolders =
+            libraryDragKind === "folder" && entry.entryKind === "folder";
+          if ((!canReorderFiles && !canReorderFolders) ||
+              state.filter === "recent" ||
+              state.tagName ||
+              state.query.trim()) {
+            return;
+          }
+          event.preventDefault();
+          if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+          const rect = card.getBoundingClientRect();
+          const insertAfter = event.clientX >= rect.left + rect.width / 2;
+          card.classList.toggle("reorder-before", !insertAfter);
+          card.classList.toggle("reorder-after", insertAfter);
+        });
+        card.addEventListener("dragleave", (event) => {
+          if (!card.contains(event.relatedTarget)) {
+            card.classList.remove("reorder-before", "reorder-after");
+          }
+        });
+        card.addEventListener("drop", async (event) => {
+          const canReorderFiles =
+            libraryDragKind === "files" && entry.entryKind !== "folder";
+          const canReorderFolders =
+            libraryDragKind === "folder" && entry.entryKind === "folder";
+          if (!canReorderFiles && !canReorderFolders) {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          const insertAfter = card.classList.contains("reorder-after");
+          card.classList.remove("reorder-before", "reorder-after");
+          try {
+            if (canReorderFolders) {
+              await reorderFolders(libraryDraggedFolderId, entry.id, insertAfter);
+            } else {
+              const requested = new Set(libraryDraggedItemKeys);
+              const movedEntries = getEntries().filter((candidate) =>
+                candidate.entryKind !== "folder" && requested.has(entryKey(candidate))
+              );
+              await reorderFiles(movedEntries, entry, insertAfter);
+            }
+          } catch (error) {
+            toast(error.message || t("invalidDrop"), "error");
+          }
         });
       });
+
+      const selectionSurface = app.querySelector(".content");
+      if (selectionSurface) {
+        selectionSurface.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0 || event.pointerType === "touch") return;
+          if (event.target.closest("button, input, textarea, select, a, .library-heading")) return;
+          const startedCard = event.target.closest(".asset-card");
+          if (!event.shiftKey && startedCard) return;
+          const surfaceRect = selectionSurface.getBoundingClientRect();
+          if (event.clientX >= surfaceRect.right - 18) return;
+
+          const startX = event.clientX;
+          const startY = event.clientY;
+          const startedEntryKey = startedCard
+            ? `${startedCard.dataset.kind}:${startedCard.dataset.id}`
+            : "";
+          let lastPointer = { x: startX, y: startY };
+          const additive = event.shiftKey;
+          const baseSelection = additive ? new Set(state.selected) : new Set();
+          let currentSelection = new Set(baseSelection);
+          let moved = false;
+          const selectableEntries = getEntries().filter((entry) => entry.entryKind !== "folder");
+          const marquee = document.createElement("div");
+          marquee.className = "library-marquee";
+          marquee.hidden = true;
+          document.body.append(marquee);
+          selectionSurface.classList.add("selection-active");
+          libraryMarqueeActive = true;
+
+          const updateMarquee = (pointerEvent) => {
+            lastPointer = { x: pointerEvent.clientX, y: pointerEvent.clientY };
+            const left = Math.min(startX, pointerEvent.clientX);
+            const top = Math.min(startY, pointerEvent.clientY);
+            const width = Math.abs(pointerEvent.clientX - startX);
+            const height = Math.abs(pointerEvent.clientY - startY);
+            if (!moved && width < 4 && height < 4) return;
+            moved = true;
+            marquee.hidden = false;
+            marquee.style.left = `${left}px`;
+            marquee.style.top = `${top}px`;
+            marquee.style.width = `${width}px`;
+            marquee.style.height = `${height}px`;
+
+            const bounds = {
+              left,
+              top,
+              right: left + width,
+              bottom: top + height
+            };
+            currentSelection = new Set(baseSelection);
+            for (const entry of selectableEntries) {
+              const card = selectionSurface.querySelector(
+                `.asset-card[data-kind="${entry.entryKind}"][data-id="${entry.id}"]`
+              );
+              if (!card) continue;
+              const rect = card.getBoundingClientRect();
+              const intersects =
+                rect.right >= bounds.left &&
+                rect.left <= bounds.right &&
+                rect.bottom >= bounds.top &&
+                rect.top <= bounds.bottom;
+              if (intersects) currentSelection.add(entryKey(entry));
+            }
+
+            selectionSurface.querySelectorAll(".asset-card").forEach((card) => {
+              const key = `${card.dataset.kind}:${card.dataset.id}`;
+              const selectable = card.dataset.kind !== "folder";
+              const selected = selectable ? currentSelection.has(key) : baseSelection.has(key);
+              card.classList.toggle("selected", selected);
+            });
+          };
+
+          let autoScrollFrame = 0;
+          const autoScroll = () => {
+            if (!libraryMarqueeActive) return;
+            const rect = selectionSurface.getBoundingClientRect();
+            const edge = 44;
+            let delta = 0;
+            if (lastPointer.y < rect.top + edge) {
+              delta = -Math.ceil(((rect.top + edge - lastPointer.y) / edge) * 16);
+            } else if (lastPointer.y > rect.bottom - edge) {
+              delta = Math.ceil(((lastPointer.y - (rect.bottom - edge)) / edge) * 16);
+            }
+            if (delta !== 0) {
+              const previousScroll = selectionSurface.scrollTop;
+              selectionSurface.scrollTop += delta;
+              if (selectionSurface.scrollTop !== previousScroll) {
+                updateMarquee(lastPointer);
+              }
+            }
+            autoScrollFrame = requestAnimationFrame(autoScroll);
+          };
+
+          const finishSelection = () => {
+            window.removeEventListener("pointermove", updateMarquee);
+            window.removeEventListener("pointercancel", finishSelection);
+            window.removeEventListener("pointerup", finishSelection);
+            cancelAnimationFrame(autoScrollFrame);
+            libraryMarqueeActive = false;
+            marquee.remove();
+            selectionSurface.classList.remove("selection-active");
+            if (!moved && event.shiftKey && startedEntryKey) {
+              libraryClickSuppressedUntil = performance.now() + 250;
+              const entry = getEntries().find(
+                (candidate) => entryKey(candidate) === startedEntryKey
+              );
+              state.selected = baseSelection;
+              if (entry) {
+                selectCard(entry, true, true);
+              } else {
+                render({ preserveContentScroll: true });
+              }
+              return;
+            }
+            if (moved) {
+              libraryClickSuppressedUntil = performance.now() + 250;
+            }
+            const unchanged =
+              currentSelection.size === state.selected.size &&
+              [...currentSelection].every((key) => state.selected.has(key));
+            state.selected = currentSelection;
+            state.selectionAnchorKey = currentSelection.size
+              ? [...currentSelection][0]
+              : null;
+            if (!unchanged) render({ preserveContentScroll: true });
+          };
+
+          event.preventDefault();
+          window.addEventListener("pointermove", updateMarquee);
+          window.addEventListener("pointerup", finishSelection, { once: true });
+          window.addEventListener("pointercancel", finishSelection, { once: true });
+          autoScrollFrame = requestAnimationFrame(autoScroll);
+        });
+      }
 
       app.querySelectorAll(".folder-row").forEach((row) => {
         const folderId = row.dataset.folderId;
@@ -2161,6 +2977,9 @@
             return;
           }
           internalDragActive = true;
+          libraryDragKind = "folder";
+          libraryDraggedFolderId = folder.id;
+          libraryDraggedItemKeys = [];
           document.getElementById("drop-overlay").hidden = true;
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData("application/x-megabox-folder", folder.id);
@@ -2169,30 +2988,60 @@
         });
         row.addEventListener("dragend", () => {
           internalDragActive = false;
+          libraryDragKind = "";
+          libraryDraggedFolderId = "";
+          libraryDraggedItemKeys = [];
           document.getElementById("drop-overlay").hidden = true;
           row.classList.remove("dragging");
+          app.querySelectorAll(".drop-target, .reorder-before, .reorder-after, .reorder-sibling").forEach((node) => {
+            node.classList.remove("drop-target", "reorder-before", "reorder-after", "reorder-sibling");
+          });
         });
         row.addEventListener("dragover", (event) => {
-          const types = event.dataTransfer?.types;
-          if (!types?.includes("application/x-megabox-items") && !types?.includes("application/x-megabox-folder")) return;
+          if (!libraryDragKind) return;
           event.preventDefault();
-          event.dataTransfer.dropEffect = "move";
-          row.classList.add("drop-target");
+          if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+          const draggedFolder = folderById(libraryDraggedFolderId);
+          const canReorderFolders =
+            libraryDragKind === "folder" &&
+            folder &&
+            draggedFolder &&
+            draggedFolder.id !== folder.id;
+          const rect = row.getBoundingClientRect();
+          const position = (event.clientY - rect.top) / Math.max(1, rect.height);
+          const reorderBefore = canReorderFolders && position < 0.28;
+          const reorderAfter = canReorderFolders && position > 0.72;
+          const reorderSibling = reorderBefore || reorderAfter;
+          row.classList.toggle("reorder-sibling", reorderSibling);
+          row.classList.toggle("drop-target", !reorderSibling);
+          row.classList.toggle("reorder-before", reorderBefore);
+          row.classList.toggle("reorder-after", reorderAfter);
         });
         row.addEventListener("dragleave", (event) => {
-          if (!row.contains(event.relatedTarget)) row.classList.remove("drop-target");
+          if (!row.contains(event.relatedTarget)) {
+            row.classList.remove("drop-target", "reorder-before", "reorder-after", "reorder-sibling");
+          }
         });
-        row.addEventListener("drop", (event) => {
+        row.addEventListener("drop", async (event) => {
           event.preventDefault();
-          row.classList.remove("drop-target");
+          const insertAfter = row.classList.contains("reorder-after");
+          const reorderSibling = row.classList.contains("reorder-sibling");
+          row.classList.remove("drop-target", "reorder-before", "reorder-after", "reorder-sibling");
           try {
-            const draggedFolderId = event.dataTransfer.getData("application/x-megabox-folder");
-            if (draggedFolderId) {
-              moveFolder(folderById(draggedFolderId), folder?.id || "");
+            if (libraryDragKind === "folder") {
+              const draggedFolder = folderById(libraryDraggedFolderId);
+              if (reorderSibling && draggedFolder && folder) {
+                await reorderFolders(draggedFolder.id, folder.id, insertAfter);
+              } else {
+                await moveFolder(draggedFolder, folder?.id || "");
+              }
               return;
             }
-            const items = JSON.parse(event.dataTransfer.getData("application/x-megabox-items") || "[]");
-            moveItemsToFolder(items, folderId);
+            const requested = new Set(libraryDraggedItemKeys);
+            const items = getEntries()
+              .filter((entry) => requested.has(entryKey(entry)))
+              .map((entry) => ({ id: entry.id, kind: entry.entryKind }));
+            await moveItemsToFolder(items, folderId);
           } catch {
             toast(t("invalidDrop"), "error");
           }
@@ -2238,6 +3087,9 @@
         });
         node.addEventListener("dragstart", (event) => {
           internalDragActive = true;
+          libraryDragKind = "files";
+          libraryDraggedFolderId = "";
+          libraryDraggedItemKeys = [`image:${asset.id}`];
           document.getElementById("drop-overlay").hidden = true;
           event.dataTransfer.effectAllowed = "move";
           event.dataTransfer.setData(
@@ -2249,6 +3101,9 @@
         });
         node.addEventListener("dragend", () => {
           internalDragActive = false;
+          libraryDragKind = "";
+          libraryDraggedFolderId = "";
+          libraryDraggedItemKeys = [];
           document.getElementById("drop-overlay").hidden = true;
           node.classList.remove("dragging");
         });
@@ -2334,7 +3189,9 @@
         button.addEventListener("click", async () => {
           const action = button.dataset.action;
           if (action === "import") await importFiles();
+          if (action === "import-pdf") await importPdfFiles();
           if (action === "new-board") await createBoard();
+          if (action === "select-all") selectAllCurrent();
           if (action === "create-folder") {
             await createFolder(state.folderId && state.folderId !== "__unfiled" ? state.folderId : null);
           }
@@ -2360,12 +3217,20 @@
     }
 
     window.addEventListener("keydown", (event) => {
+      if ((event.ctrlKey || event.metaKey) &&
+          event.key.toLowerCase() === "a" &&
+          !document.querySelector(".modal-backdrop") &&
+          !event.target.matches("input, textarea, select, [contenteditable=true]")) {
+        event.preventDefault();
+        selectAllCurrent();
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         app.querySelector("#library-search")?.focus();
       }
       if (event.key === "Escape") {
         state.selected.clear();
+        state.selectionAnchorKey = null;
         render();
       }
       if (event.key === "Enter" && state.selected.size) {
@@ -2374,12 +3239,18 @@
       }
     });
 
-    bindFileDrop(load, () => ({
-      folderId: state.folderId && state.folderId !== "__unfiled" ? state.folderId : ""
-    }));
+    assetHoverPreview.bind(app, (assetId) =>
+      (state.library.assets || []).find((asset) => asset.id === assetId));
+    bindFileDrop(load, (event) => {
+      const targetFolderId = event.target.closest(".folder-row")?.dataset.folderId;
+      const resolvedFolderId = targetFolderId === "__unfiled"
+        ? ""
+        : targetFolderId || (state.folderId && state.folderId !== "__unfiled" ? state.folderId : "");
+      return { folderId: resolvedFolderId };
+    });
     window.addEventListener("focus", () => {
       document.documentElement.lang = getLanguage();
-      load();
+      load({ preserveContentScroll: true });
     });
     window.addEventListener("storage", (event) => {
       if (event.key === "megabox.settings.language") {
@@ -2512,6 +3383,7 @@
           <div class="file-facts" style="margin-top:8px">
             <div class="file-fact"><span>${t("format")}</span><b>${escapeHtml((asset.extension || "").replace(".", "").toUpperCase())}</b></div>
             <div class="file-fact"><span>${t("size")}</span><b>${formatBytes(asset.size)}</b></div>
+            ${asset.pdfPageNumber ? `<div class="file-fact"><span>${t("pdfPage")}</span><b>${asset.pdfPageNumber} / ${asset.pdfPageCount || "?"}</b></div>` : ""}
             <div class="file-fact"><span>${t("importedAt")}</span><b>${formatDate(asset.createdAt)}</b></div>
           </div>
         </section>
@@ -3130,10 +4002,11 @@
         <div class="nav-item tree-asset-row board-tree-asset"
              draggable="true"
              data-board-asset-id="${escapeHtml(asset.id)}"
+             data-asset-preview-id="${escapeHtml(asset.id)}"
              style="--tree-depth:${Math.min(depth, 2)}"
              title="${escapeHtml(asset.name)}">
           <span class="tree-asset-guide"></span>
-          <img class="tree-asset-thumb" src="${assetUrl(asset)}" alt="" draggable="false" />
+          <span class="tree-asset-icon">${icon("image")}</span>
           <span class="folder-row-name">${escapeHtml(compactName(asset.name))}</span>
           ${query ? `<span class="board-search-path">${escapeHtml(folderPath(asset.folderId) || t("uncategorized"))}</span>` : ""}
         </div>`;
@@ -4819,6 +5692,7 @@
         }
       }
     });
+    assetHoverPreview.bind(app, (assetId) => assetsById.get(assetId));
     renderShell();
   }
 
@@ -4843,7 +5717,7 @@
               <button type="button" disabled>${icon("frame")}${t("appearance")}</button>
               <button type="button" class="active">${icon("globe")}${t("language")}</button>
             </nav>
-            <div class="preferences-version">MegaBox 0.1</div>
+            <div class="preferences-version">MegaBox 0.2</div>
           </aside>
           <main class="preferences-main">
             <header class="preferences-heading">

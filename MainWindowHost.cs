@@ -166,7 +166,7 @@ public sealed class ViewerWindowHost : Grid
         }
     }
 
-    private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
     {
         var raw = e.TryGetWebMessageAsString();
         JsonObject? request;
@@ -189,7 +189,23 @@ public sealed class ViewerWindowHost : Grid
 
         try
         {
-            var payload = Handle(action, request);
+            JsonNode? payload;
+            if (action == "pdf.import")
+            {
+                payload = await HandlePdfImport(request, requestId);
+            }
+            else if (action == "files.import")
+            {
+                payload = await HandleFileImport(request, requestId);
+            }
+            else if (action == "upload.finish")
+            {
+                payload = await HandleUploadFinish(request, requestId);
+            }
+            else
+            {
+                payload = Handle(action, request);
+            }
             Respond(new JsonObject
             {
                 ["requestId"] = requestId,
@@ -208,6 +224,74 @@ public sealed class ViewerWindowHost : Grid
         }
     }
 
+    private async Task<JsonNode?> HandlePdfImport(JsonObject request, string requestId)
+    {
+        var store = _store ?? throw new InvalidOperationException("本地存储尚未初始化。");
+        var owner = Window.GetWindow(this);
+        var handle = owner is null ? IntPtr.Zero : new WindowInteropHelper(owner).Handle;
+        return await store.ImportPdfAsync(
+            handle,
+            request["folderId"]?.GetValue<string>(),
+            request["pageRange"]?.GetValue<string>() ?? "",
+            request["dpi"]?.GetValue<int>() ?? 75,
+            progress => SendPdfProgress(requestId, progress));
+    }
+
+    private async Task<JsonNode?> HandleFileImport(JsonObject request, string requestId)
+    {
+        var store = _store ?? throw new InvalidOperationException("本地存储尚未初始化。");
+        var owner = Window.GetWindow(this);
+        var handle = owner is null ? IntPtr.Zero : new WindowInteropHelper(owner).Handle;
+        return await store.ImportFilesAsync(
+            handle,
+            request["folderId"]?.GetValue<string>(),
+            progress => SendPdfProgress(requestId, progress));
+    }
+
+    private async Task<JsonNode?> HandleUploadFinish(JsonObject request, string requestId)
+    {
+        var store = _store ?? throw new InvalidOperationException("本地存储尚未初始化。");
+        var result = await store.FinishUpload(
+            request["uploadId"]?.GetValue<string>() ?? "",
+            request["folderId"]?.GetValue<string>(),
+            progress => SendPdfProgress(requestId, progress));
+        if (result["count"] is not null)
+        {
+            return result;
+        }
+        return new JsonObject
+        {
+            ["items"] = result["items"]?.DeepClone() ?? new JsonArray(),
+            ["count"] = result["count"]?.GetValue<int>() ?? 0
+        };
+    }
+
+    private void SendPdfProgress(string requestId, PdfImportProgress progress)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.InvokeAsync(() => SendPdfProgress(requestId, progress));
+            return;
+        }
+        try
+        {
+            _webView.CoreWebView2?.PostWebMessageAsJson(new JsonObject
+            {
+                ["requestId"] = requestId,
+                ["progress"] = new JsonObject
+                {
+                    ["stage"] = progress.Stage,
+                    ["current"] = progress.Current,
+                    ["total"] = progress.Total,
+                    ["pageNumber"] = progress.PageNumber
+                }
+            }.ToJsonString());
+        }
+        catch
+        {
+        }
+    }
+
     private JsonNode? Handle(string action, JsonObject request)
     {
         var store = _store ?? throw new InvalidOperationException("本地存储尚未初始化。");
@@ -219,16 +303,16 @@ public sealed class ViewerWindowHost : Grid
                 return store.GetAsset(request["id"]?.GetValue<string>() ?? "");
             case "board.get":
                 return store.GetBoard(request["id"]?.GetValue<string>() ?? "");
-            case "files.import":
-            {
-                var owner = Window.GetWindow(this);
-                var handle = owner is null ? IntPtr.Zero : new WindowInteropHelper(owner).Handle;
-                return store.ImportFiles(handle, request["folderId"]?.GetValue<string>());
-            }
-            case "files.importData":
-                return store.ImportData(
-                    request["files"] as JsonArray ?? new JsonArray(),
-                    request["folderId"]?.GetValue<string>());
+            case "upload.begin":
+                return store.BeginUpload(
+                    request["name"]?.GetValue<string>() ?? "",
+                    request["size"]?.GetValue<long>() ?? 0);
+            case "upload.chunk":
+                return store.AppendUpload(
+                    request["uploadId"]?.GetValue<string>() ?? "",
+                    request["data"]?.GetValue<string>() ?? "");
+            case "upload.cancel":
+                return store.CancelUpload(request["uploadId"]?.GetValue<string>() ?? "");
             case "board.create":
                 return store.CreateBoard(
                     request["name"]?.GetValue<string>() ?? "",
@@ -264,10 +348,14 @@ public sealed class ViewerWindowHost : Grid
                 return store.MoveFolder(
                     request["id"]?.GetValue<string>() ?? "",
                     request["parentId"]?.GetValue<string>());
+            case "folders.reorder":
+                return store.ReorderFolders(request["items"] as JsonArray ?? new JsonArray());
             case "items.assignFolder":
                 return store.AssignItemsToFolder(
                     request["items"] as JsonArray ?? new JsonArray(),
                     request["folderId"]?.GetValue<string>());
+            case "items.reorderFiles":
+                return store.ReorderFiles(request["items"] as JsonArray ?? new JsonArray());
             case "tag.create":
                 return store.CreateTag(request["name"]?.GetValue<string>() ?? "");
             case "tag.rename":

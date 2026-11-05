@@ -375,6 +375,27 @@ button,
   opacity: 0.42;
 }
 
+.folder-row.reorder-before::before,
+.folder-row.reorder-after::after {
+  position: absolute;
+  right: 7px;
+  left: calc(7px + var(--folder-depth, 0) * 14px);
+  height: 2px;
+  border-radius: 999px;
+  background: #a99dff;
+  box-shadow: 0 0 9px rgba(139, 124, 255, 0.55);
+  content: "";
+  pointer-events: none;
+}
+
+.folder-row.reorder-before::before {
+  top: -2px;
+}
+
+.folder-row.reorder-after::after {
+  bottom: -2px;
+}
+
 .folder-toggle {
   position: relative;
   width: 14px;
@@ -464,14 +485,21 @@ button,
   flex: 0 0 auto;
 }
 
-.tree-asset-thumb {
+.tree-asset-icon {
+  display: grid;
   width: 22px;
   height: 22px;
   flex: 0 0 auto;
+  place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
-  object-fit: cover;
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.22);
+  background: #171c25;
+  color: #778296;
+}
+
+.tree-asset-icon svg {
+  width: 13px;
+  height: 13px;
 }
 
 .tree-asset-row .folder-row-name {
@@ -933,6 +961,12 @@ button,
   font-size: 12px;
 }
 
+.library-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .view-toggle {
   display: flex;
   gap: 2px;
@@ -997,6 +1031,28 @@ button,
   box-shadow:
     0 0 0 1px rgba(139, 124, 255, 0.3),
     0 16px 38px rgba(35, 23, 105, 0.25);
+}
+
+.asset-card.reorder-before::before,
+.asset-card.reorder-after::after {
+  position: absolute;
+  z-index: 4;
+  top: 5px;
+  bottom: 5px;
+  width: 3px;
+  border-radius: 999px;
+  background: #a99dff;
+  box-shadow: 0 0 12px rgba(139, 124, 255, 0.65);
+  content: "";
+  pointer-events: none;
+}
+
+.asset-card.reorder-before::before {
+  left: -9px;
+}
+
+.asset-card.reorder-after::after {
+  right: -9px;
 }
 
 .asset-card.dragging {
@@ -1245,6 +1301,73 @@ button,
   font-size: 11px;
 }
 
+.asset-hover-preview {
+  position: fixed;
+  z-index: 1500;
+  width: min(620px, calc(100vw - 24px));
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: #12161d;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.48);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(5px) scale(0.985);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease,
+    visibility 120ms ease;
+}
+
+.asset-hover-preview.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.asset-hover-preview-frame {
+  display: grid;
+  height: min(540px, 64vh);
+  place-items: center;
+  overflow: hidden;
+  border-radius: 8px;
+  background:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.025) 25%, transparent 25%) 0 0 / 18px 18px,
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.025) 25%, transparent 25%) 0 9px / 18px 18px,
+    #0a0d12;
+}
+
+.asset-hover-preview-frame img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.asset-hover-preview-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 9px 7px 4px;
+}
+
+.asset-hover-preview-copy strong {
+  overflow: hidden;
+  color: #dce2ec;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asset-hover-preview-copy span {
+  color: #727d8f;
+  font-size: 9px;
+}
+
 .drop-overlay {
   position: fixed;
   z-index: 1000;
@@ -1404,6 +1527,76 @@ button,
 .modal-field input {
   height: 38px;
   margin-top: 2px;
+}
+
+.modal-field select {
+  height: 38px;
+  margin-top: 2px;
+}
+
+.pdf-import-dialog .modal-field + .modal-field {
+  margin-top: 14px;
+}
+
+.pdf-progress-dialog {
+  width: min(430px, calc(100vw - 40px));
+}
+
+.pdf-progress-track {
+  height: 7px;
+  overflow: hidden;
+  margin-top: 20px;
+  border-radius: 999px;
+  background: #0d1016;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.pdf-progress-track > span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #7567e8, #a99dff);
+  transition: width 180ms ease;
+}
+
+.pdf-progress-track > span.indeterminate {
+  animation: pdf-progress-pulse 1.15s ease-in-out infinite alternate;
+}
+
+.pdf-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 9px;
+  color: #697385;
+  font-size: 9px;
+}
+
+.library-marquee {
+  position: fixed;
+  z-index: 900;
+  border: 1px solid rgba(139, 124, 255, 0.9);
+  border-radius: 5px;
+  background: rgba(139, 124, 255, 0.13);
+  box-shadow: 0 0 0 1px rgba(139, 124, 255, 0.14);
+  pointer-events: none;
+}
+
+.content.selection-active {
+  cursor: crosshair;
+  user-select: none;
+}
+
+@keyframes pdf-progress-pulse {
+  from {
+    width: 12%;
+    opacity: 0.55;
+  }
+
+  to {
+    width: 34%;
+    opacity: 1;
+  }
 }
 
 .modal-actions {

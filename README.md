@@ -7,6 +7,7 @@
 [简体中文](#简体中文) · [English](#english) · [日本語](#日本語) · [한국어](#한국어)
 
 ![Windows](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.2-8B7CFF?style=flat-square)
 ![.NET](https://img.shields.io/badge/.NET-8-512BD4?style=flat-square&logo=dotnet)
 ![WebView2](https://img.shields.io/badge/WebView2-Runtime-0078D4?style=flat-square)
 ![Offline](https://img.shields.io/badge/offline-local--first-59D8A7?style=flat-square)
@@ -47,7 +48,8 @@ MegaBox is an offline Windows desktop application for collecting visual referenc
 ### Highlights
 
 - **Local and offline:** assets, boards, settings, and thumbnails stay on the local device.
-- **Explorer-style library:** nested folders, expandable image nodes, tags, search, and multi-selection.
+- **Explorer-style library:** nested folders, expandable image nodes, tags, search, Shift multi-selection, marquee selection, select-all, drag reordering, and hover previews.
+- **Offline PDF import:** drag large PDFs through memory-safe chunked upload, or import all/selected pages at 75, 150, or 300 DPI with live progress.
 - **Image viewer:** center-anchored zoom, panning, non-destructive crop, annotations, opacity, and direct positioning.
 - **Infinite canvas:** native-pixel image placement, pan, zoom, multi-select, group movement, rotation, and fixed-size handles.
 - **Canvas annotations:** editable text and arrows with colors, opacity, line width, font size, and rotation.
@@ -93,6 +95,8 @@ Original images are copied into `assets`. Back up the whole `MegaBoxLibrary` fol
 | Action | Shortcut |
 | --- | --- |
 | Search library | `Ctrl K` |
+| Select all visible assets | `Ctrl A` |
+| Add or remove from selection | `Shift + click` |
 | Open selected item | `Enter` |
 | Pan board | `Space + drag` |
 | Zoom board or image | Mouse wheel |
@@ -111,7 +115,8 @@ MegaBox 是一个本地离线的 Windows 素材管理与参考画布工具，把
 ### 主要功能
 
 - **完全离线：** 素材、画布、设置和缩略图保存在本机。
-- **资源管理器式素材库：** 多层文件夹、可展开图片节点、标签、搜索和多选。
+- **资源管理器式素材库：** 多层文件夹、可展开图片节点、标签、搜索、Shift 多选、框选、全选、拖动排序和悬浮预览。
+- **离线 PDF 导入：** 大 PDF 通过分块方式拖入，也可按全部/指定页导入，支持 75、150、300 DPI 和实时进度。
 - **图片查看器：** 视角中心缩放、平移、非破坏裁剪、文字标注、透明度和位置调整。
 - **无限画布：** 按图片原始像素导入、缩放、平移、框选、整体移动、旋转和固定屏幕尺寸控制点。
 - **画布标注：** 可编辑文字和箭头，支持颜色、透明度、线宽、字号和旋转。
@@ -157,6 +162,8 @@ MegaBoxLibrary/
 | 操作 | 快捷键 |
 | --- | --- |
 | 搜索素材 | `Ctrl K` |
+| 全选当前视图素材 | `Ctrl A` |
+| 增加或取消选择 | `Shift + 单击` |
 | 打开选中项目 | `Enter` |
 | 平移画布 | `Space + 拖动` |
 | 缩放画布或图片 | 鼠标滚轮 |
@@ -175,7 +182,8 @@ MegaBox は、Windows 向けのローカル・オフライン型ビジュアル�
 ### 主な機能
 
 - **完全ローカル：** アセット、ボード、設定、サムネイルは端末内に保存されます。
-- **エクスプローラー形式のライブラリ：** 階層フォルダー、画像ノード、タグ、検索、複数選択。
+- **エクスプローラー形式のライブラリ：** 階層フォルダー、画像ノード、タグ、検索、Shift 複数選択、範囲選択、すべて選択、ドラッグ並べ替え、ホバープレビュー。
+- **オフライン PDF インポート：** 大きな PDF は分割転送でドロップし、全ページまたは指定ページを 75・150・300 DPI でインポートできます。進捗も表示します。
 - **画像ビューア：** 中心基準のズーム、パン、非破壊トリミング、テキスト注釈、透明度、位置調整。
 - **無限キャンバス：** 元画像のピクセルサイズで配置、ズーム、パン、範囲選択、グループ移動、回転、固定サイズの操作ハンドル。
 - **キャンバス注釈：** 編集可能なテキストと矢印。色、透明度、線幅、フォントサイズ、回転に対応。
@@ -221,6 +229,8 @@ MegaBoxLibrary/
 | 操作 | ショートカット |
 | --- | --- |
 | ライブラリ検索 | `Ctrl K` |
+| 現在のビューをすべて選択 | `Ctrl A` |
+| 選択に追加・選択解除 | `Shift + クリック` |
 | 選択項目を開く | `Enter` |
 | キャンバス移動 | `Space + ドラッグ` |
 | キャンバス／画像のズーム | マウスホイール |
@@ -239,7 +249,8 @@ MegaBox는 Windows용 로컬 오프라인 비주얼 에셋 라이브러리이자
 ### 주요 기능
 
 - **완전 오프라인:** 에셋, 보드, 설정과 썸네일이 이 기기에 저장됩니다.
-- **탐색기형 라이브러리:** 중첩 폴더, 펼칠 수 있는 이미지 노드, 태그, 검색과 다중 선택.
+- **탐색기형 라이브러리:** 중첩 폴더, 펼칠 수 있는 이미지 노드, 태그, 검색, Shift 다중 선택, 범위 선택, 모두 선택, 드래그 순서 변경과 마우스 오버 미리보기.
+- **오프라인 PDF 가져오기:** 큰 PDF는 분할 전송으로 드롭하고 전체/지정 페이지를 75·150·300 DPI로 가져올 수 있으며 실시간 진행률을 표시합니다.
 - **이미지 뷰어:** 화면 중심 기준 확대/축소, 이동, 비파괴 자르기, 텍스트 주석, 불투명도와 위치 조정.
 - **무한 캔버스:** 원본 픽셀 크기로 배치, 확대/축소, 이동, 범위 선택, 그룹 이동, 회전과 고정 크기 핸들.
 - **캔버스 주석:** 편집 가능한 텍스트와 화살표. 색상, 불투명도, 선 너비, 글꼴 크기와 회전 지원.
@@ -285,6 +296,8 @@ MegaBoxLibrary/
 | 작업 | 단축키 |
 | --- | --- |
 | 라이브러리 검색 | `Ctrl K` |
+| 현재 보기의 모든 항목 선택 | `Ctrl A` |
+| 선택 항목 추가·해제 | `Shift + 클릭` |
 | 선택 항목 열기 | `Enter` |
 | 캔버스 이동 | `Space + 드래그` |
 | 캔버스/이미지 확대·축소 | 마우스 휠 |
